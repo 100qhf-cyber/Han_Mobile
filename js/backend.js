@@ -13,17 +13,16 @@ const TIMEOUT_MS = 6000;
 const TABLE = 'vehicles';
 
 export function isConfigured() {
-  const { supabaseUrl, supabaseKey } = store.settings;
-  return Boolean((supabaseUrl || '').trim() && (supabaseKey || '').trim());
+  const { url, key } = store.connection();
+  return Boolean(url && key);
 }
 
 function endpoint(path) {
-  const base = (store.settings.supabaseUrl || '').trim().replace(/\/+$/, '');
-  return `${base}/rest/v1${path}`;
+  return `${store.connection().url}/rest/v1${path}`;
 }
 
 function headers(extra = {}) {
-  const key = (store.settings.supabaseKey || '').trim();
+  const { key } = store.connection();
   return {
     apikey: key,
     Authorization: `Bearer ${key}`,
@@ -147,8 +146,7 @@ export async function syncOnce() {
       { method: 'GET' },
     );
     const changed = store.mergeRemote((rows ?? []).map(fromRow));
-    const host = safeHost(store.settings.supabaseUrl);
-    store.setLink('connected', `Supabase 연결됨 · ${host}`);
+    store.setLink('connected', `Supabase 연결됨 · ${safeHost(store.connection().url)}`);
     if (changed) store.emit();
     return true;
   } catch (err) {

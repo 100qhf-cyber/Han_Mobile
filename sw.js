@@ -3,7 +3,10 @@
 // Supabase 요청은 절대 캐시하지 않는다. 지난 배터리 값을 보여주는 것보다
 // 연결 실패를 그대로 드러내는 편이 낫다 (앱은 로컬 모드로 계속 동작한다).
 
-const CACHE = 'han-mobile-v1';
+const CACHE = 'han-mobile-v2';
+
+// 배포 때마다 값이 바뀔 수 있어 캐시 우선으로 두면 옛 접속 정보가 남는다.
+const NETWORK_FIRST = ['/js/app-config.js'];
 
 const SHELL = [
   './',
@@ -11,6 +14,7 @@ const SHELL = [
   './manifest.webmanifest',
   './css/app.css',
   './js/main.js',
+  './js/app-config.js',
   './js/config.js',
   './js/store.js',
   './js/backend.js',
@@ -62,7 +66,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 정적 자원은 캐시 우선 + 백그라운드 갱신.
+  // 접속 정보는 네트워크 우선 — 오프라인일 때만 캐시된 값으로 떨어진다.
+  if (NETWORK_FIRST.some((p) => url.pathname.endsWith(p))) {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(request, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request).then((r) => r ?? Response.error())),
+    );
+    return;
+  }
+
+  // 나머지 정적 자원은 캐시 우선 + 백그라운드 갱신.
   event.respondWith(
     caches.match(request).then((cached) => {
       const network = fetch(request)

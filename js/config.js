@@ -1,5 +1,19 @@
 // 앱 전역 상수 — 아두이노 / Unity 쪽 정의와 값을 맞춰서 관리한다.
 
+import { APP_CONFIG } from './app-config.js';
+
+/**
+ * 배포 시 주입된 기본 접속 정보. 앱을 설치하면 별도 입력 없이 이 값으로 연결된다.
+ * 설정 탭에 직접 입력한 값이 있으면 그쪽이 우선한다.
+ */
+export const BAKED_CONNECTION = {
+  url: (APP_CONFIG.supabaseUrl || '').trim().replace(/\/+$/, ''),
+  key: (APP_CONFIG.supabaseAnonKey || '').trim(),
+};
+
+export const HAS_BAKED_CONNECTION =
+  Boolean(BAKED_CONNECTION.url && BAKED_CONNECTION.key);
+
 /**
  * 차량별 최대 배터리 용량.
  * rail_controller 계열 스케치의 `Vehicle vehicles[]` 와 같은 값을 쓴다.
@@ -39,10 +53,9 @@ export const DEFAULT_STAY_MINUTES = 120;
 
 /** 설정 기본값 */
 export const DEFAULT_SETTINGS = {
-  // Supabase 프로젝트 주소 (예: https://xxxxxxxx.supabase.co)
-  // 비워두면 로컬 모드 — 이 휴대폰 안에만 저장된다.
+  // 사용자가 설정 탭에서 직접 지정한 접속 정보.
+  // 비워두면 위 BAKED_CONNECTION(배포 시 주입값)을 쓰고, 그것도 없으면 로컬 모드.
   supabaseUrl: '',
-  // Supabase anon(publishable) key. 공개용 키이며 보호는 RLS 정책이 담당한다.
   supabaseKey: '',
   // 현황 화면 폴링 주기 (ms)
   pollIntervalMs: 1000,

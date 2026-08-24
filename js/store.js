@@ -4,7 +4,9 @@
 // 서버가 돌려준 상태를 반영하되, 아직 전송 못 한 입/출차는 아웃박스에 남겨
 // 연결이 돌아왔을 때 다시 보낸다. (지하주차장에서 신호가 끊겨도 입력은 남는다)
 
-import { DEFAULT_SETTINGS, STORAGE_KEYS, STATUS, VEHICLES } from './config.js';
+import {
+  BAKED_CONNECTION, DEFAULT_SETTINGS, STORAGE_KEYS, STATUS, VEHICLES,
+} from './config.js';
 import { clamp, uid } from './util.js';
 
 function readJSON(key, fallback) {
@@ -55,6 +57,22 @@ class Store extends EventTarget {
 
   emit() {
     this.dispatchEvent(new CustomEvent('change'));
+  }
+
+  /**
+   * 실제로 쓸 Supabase 접속 정보.
+   * 설정 탭에 입력한 값 > 배포 시 주입된 값 > 없음(로컬 모드) 순으로 고른다.
+   */
+  connection() {
+    const userUrl = (this.settings.supabaseUrl || '').trim().replace(/\/+$/, '');
+    const userKey = (this.settings.supabaseKey || '').trim();
+
+    if (userUrl && userKey) return { url: userUrl, key: userKey, source: 'settings' };
+    if (BAKED_CONNECTION.url && BAKED_CONNECTION.key) {
+      return { ...BAKED_CONNECTION, source: 'baked' };
+    }
+    // 한쪽만 입력한 경우도 그대로 넘겨서 오류 메시지가 뜨도록 둔다.
+    return { url: userUrl, key: userKey, source: userUrl || userKey ? 'settings' : 'none' };
   }
 
   // ── 조회 ──────────────────────────────────────────────────────

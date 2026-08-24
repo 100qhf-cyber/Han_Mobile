@@ -543,6 +543,21 @@ body { font-size: 15px; line-height: 1.5; }
 
 .settings-title { margin: 0 0 2px; font-size: 15px; font-weight: 700; }
 
+.notice {
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-solid);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.notice.is-ok   { background: #10291b; border-color: #1c5236; color: #86efac; }
+.notice.is-info { background: #16233a; border-color: #24406b; color: #bfdbfe; }
+
 .test-result {
   margin: 4px 0 0;
   padding: 10px 12px;

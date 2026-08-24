@@ -1,9 +1,9 @@
 // 설정 화면 — Supabase 연결, 폴링 주기, 기준 전력, 데이터 관리.
 
 import { isConfigured, syncOnce, testConnection } from '../backend.js';
-import { STORAGE_KEYS } from '../config.js';
+import { BAKED_CONNECTION, HAS_BAKED_CONNECTION, STORAGE_KEYS } from '../config.js';
 import { store } from '../store.js';
-import { $, el } from '../util.js';
+import { $, el, mount } from '../util.js';
 
 let root = null;
 
@@ -12,19 +12,42 @@ export function renderSettings(container) {
   paint();
 }
 
+/** 설정 탭에서 직접 지정한 접속 정보를 쓰고 있는가 */
+const usesOverride = () => store.connection().source === 'settings';
+
+/** 연결 정보가 어디서 왔는지 알려주는 안내문 */
+function connectionNotice() {
+  if (usesOverride()) {
+    return el('p', { class: 'notice is-info' },
+      '이 휴대폰에 직접 입력한 주소로 연결합니다. 아래 두 칸을 비우고 저장하면 기본 연결로 돌아갑니다.');
+  }
+  if (HAS_BAKED_CONNECTION) {
+    return el('p', { class: 'notice is-ok' },
+      `앱에 내장된 주소로 자동 연결됩니다 (${safeHost(BAKED_CONNECTION.url)}). ` +
+      '다른 프로젝트에 붙일 때만 아래에 입력하세요.');
+  }
+  return el('p', { class: 'notice' },
+    '연결 정보가 없어 로컬 모드로 동작합니다 — 입력은 이 휴대폰 안에만 저장되고 Unity 로 넘어가지 않습니다.');
+}
+
+function safeHost(url) {
+  try { return new URL(url).host; } catch { return url; }
+}
+
 function paint() {
   const s = store.settings;
 
-  root.replaceChildren(
+  mount(root,
     el('section', { class: 'settings-block' }, [
       el('h2', { class: 'settings-title' }, 'Supabase 연결'),
-      el('p', { class: 'hint' },
-        '비워두면 로컬 모드로 동작합니다 — 입력은 이 휴대폰 안에만 저장되고 Unity 로 넘어가지 않습니다.'),
+      connectionNotice(),
 
       el('label', { class: 'field-label', for: 's-url' }, 'Project URL'),
       el('input', {
         class: 'input', id: 's-url', type: 'url', inputmode: 'url',
-        placeholder: 'https://xxxxxxxxxxxx.supabase.co',
+        placeholder: HAS_BAKED_CONNECTION
+          ? `기본값: ${safeHost(BAKED_CONNECTION.url)}`
+          : 'https://xxxxxxxxxxxx.supabase.co',
         autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false',
         value: s.supabaseUrl,
       }),
@@ -32,7 +55,7 @@ function paint() {
       el('label', { class: 'field-label', for: 's-key' }, 'anon (publishable) key'),
       el('textarea', {
         class: 'input input-key', id: 's-key', rows: '3',
-        placeholder: 'eyJhbGciOi...',
+        placeholder: HAS_BAKED_CONNECTION ? '기본값 사용 중 — 비워두세요' : 'eyJhbGciOi...',
         autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false',
       }, s.supabaseKey),
       el('p', { class: 'hint' },
@@ -42,6 +65,10 @@ function paint() {
         el('button', { type: 'button', class: 'btn btn-ghost', id: 's-test', onclick: onTest }, '연결 테스트'),
         el('button', { type: 'button', class: 'btn btn-primary', onclick: onSave }, '저장'),
       ]),
+      usesOverride()
+        ? el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: onUseBaked },
+            '기본 연결로 되돌리기')
+        : null,
       el('p', { class: 'test-result', id: 's-test-result', hidden: true }),
     ]),
 
@@ -72,7 +99,7 @@ function paint() {
       el('div', { class: 'stat-row' }, [
         stat('저장된 차량', String(store.all().length)),
         stat('전송 대기', String(store.outbox.length)),
-        stat('연결', isConfigured() ? 'Supabase' : '로컬'),
+        stat('연결', isConfigured() ? (usesOverride() ? '직접 지정' : '자동') : '로컬'),
       ]),
       el('div', { class: 'btn-row' }, [
         el('button', { type: 'button', class: 'btn btn-ghost', onclick: onExport }, 'JSON 내보내기'),
@@ -105,13 +132,27 @@ function readForm() {
 function onSave() {
   store.updateSettings(readForm());
   syncOnce();
+  paint();
   toast('설정을 저장했습니다', 'ok');
+}
+
+/** 직접 입력한 접속 정보를 지우고 앱에 내장된 기본 연결로 되돌린다. */
+function onUseBaked() {
+  store.updateSettings({ supabaseUrl: '', supabaseKey: '' });
+  syncOnce();
+  paint();
+  toast('기본 연결로 되돌렸습니다', 'ok');
 }
 
 async function onTest() {
   const btn = $('#s-test', root);
   const result = $('#s-test-result', root);
-  const { supabaseUrl, supabaseKey } = readForm();
+
+  // 칸이 비어 있으면 실제로 쓰이게 될 연결(내장값)을 테스트한다.
+  const form = readForm();
+  const effective = store.connection();
+  const supabaseUrl = form.supabaseUrl || effective.url;
+  const supabaseKey = form.supabaseKey || effective.key;
 
   btn.disabled = true;
   btn.textContent = '확인 중...';

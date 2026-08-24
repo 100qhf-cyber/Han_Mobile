@@ -25,6 +25,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 저장소 Secret 의 접속 정보를 js/app-config.js 로 굽는다.
+      # 덕분에 앱을 설치하면 설정 입력 없이 바로 연결된다.
+      # Secret 이 없으면 빈 값이 그대로 남아 앱은 로컬 모드로 뜬다.
+      - name: Supabase 설정 주입
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+
+          cfg = {
+              "supabaseUrl": os.environ.get("SUPABASE_URL", "").strip().rstrip("/"),
+              "supabaseAnonKey": os.environ.get("SUPABASE_ANON_KEY", "").strip(),
+          }
+
+          with open("js/app-config.js", "w", encoding="utf-8") as f:
+              f.write("// 배포 시 자동 생성된 파일 — 직접 수정하지 마세요.\n")
+              f.write("// 값은 저장소 Secret(SUPABASE_URL / SUPABASE_ANON_KEY)에서 옵니다.\n\n")
+              f.write("export const APP_CONFIG = ")
+              f.write(json.dumps(cfg, ensure_ascii=False, indent=2))
+              f.write(";\n")
+
+          # 값 자체는 로그에 남기지 않는다.
+          print("supabaseUrl 설정됨:", bool(cfg["supabaseUrl"]))
+          print("anon key 설정됨  :", bool(cfg["supabaseAnonKey"]))
+          PY
+
       - uses: actions/configure-pages@v5
 
       - name: Upload site
