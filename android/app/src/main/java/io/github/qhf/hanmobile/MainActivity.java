@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.CookieManager;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -53,6 +54,11 @@ public class MainActivity extends AppCompatActivity {
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
+
+        // WebChromeClient 가 없으면 WebView 는 confirm()/alert() 를 띄우지 않고
+        // 곧바로 false 를 돌려준다 — 출차 처리처럼 confirm 으로 되묻는 동작이 전부 조용히 취소된다.
+        // 기본 구현만으로 시스템 대화상자가 뜬다.
+        web.setWebChromeClient(new WebChromeClient());
 
         web.setWebViewClient(new WebViewClient() {
             @Override
