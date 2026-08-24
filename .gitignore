@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+
+# 에디터
+.vscode/
+.idea/
+*.swp
+
+# 로컬 전용 설정 (Supabase 키 등이 들어갈 수 있음)
+.env
+.env.*
+js/config.local.js
