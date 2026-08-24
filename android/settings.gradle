@@ -1,0 +1,22 @@
+// WebView 래퍼 APK 빌드용 Gradle 설정.
+// 웹 자산은 이 프로젝트에 복사되지 않는다 — 앱은 배포된 GitHub Pages 주소를 띄운다.
+// 따라서 웹을 재배포하면 앱을 다시 설치하지 않아도 최신 화면이 뜬다.
+
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'Han Mobile'
+include ':app'

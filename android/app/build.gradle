@@ -1,0 +1,46 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.qhf.hanmobile'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'io.github.qhf.hanmobile'
+        minSdk        24
+        targetSdk     35
+
+        // CI 실행 번호를 그대로 버전으로 쓴다. 로컬 빌드면 1 / 1.0.0.
+        versionCode (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as Integer
+        versionName "1.0.${System.getenv('GITHUB_RUN_NUMBER') ?: '0'}"
+    }
+
+    // 서명 정보는 전부 환경변수로 받는다 — 저장소에 keystore 를 넣지 않는다.
+    signingConfigs {
+        release {
+            def storePath = System.getenv('ANDROID_KEYSTORE_PATH')
+            if (storePath) {
+                storeFile     file(storePath)
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias      System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword   System.getenv('ANDROID_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+}

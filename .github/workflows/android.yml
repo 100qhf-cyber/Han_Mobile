@@ -1,0 +1,135 @@
+name: Build APK
+
+# PWA 를 감싼 WebView 래퍼 APK 를 만든다.
+# 웹 자산은 APK 에 들어가지 않는다 — 앱은 GitHub Pages 주소를 띄우므로
+# 웹만 재배포해도 앱 화면은 최신이 된다. APK 는 껍데기가 바뀔 때만 다시 만들면 된다.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Android SDK 구성요소 설치
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      # PWA 아이콘을 그대로 런처 아이콘으로 쓴다. 같은 그림을 두 벌 보관하지 않는다.
+      - name: 런처 아이콘 준비
+        run: |
+          dst=android/app/src/main/res/mipmap-xxxhdpi
+          mkdir -p "$dst"
+          cp icons/icon-512.png          "$dst/ic_launcher.png"
+          cp icons/icon-maskable-512.png "$dst/ic_launcher_foreground.png"
+
+      # ANDROID_KEYSTORE_BASE64 Secret 이 있으면 그 키로 서명한다(서명이 고정돼 덮어쓰기 설치 가능).
+      # 없으면 이번 실행용 키를 새로 만들고, 아래에서 keystore 를 아티팩트로 함께 내려준다.
+      - name: 서명 키 준비
+        id: keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          store="$RUNNER_TEMP/han-mobile.jks"
+
+          if [ -n "${KEYSTORE_B64:-}" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$store"
+            echo "ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_ALIAS=$KEY_ALIAS"                 >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD"           >> "$GITHUB_ENV"
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+          else
+            keytool -genkeypair -v \
+              -keystore "$store" -alias hanmobile \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass hanmobile -keypass hanmobile \
+              -dname "CN=Han Mobile, O=Han, C=KR"
+            echo "ANDROID_KEYSTORE_PASSWORD=hanmobile" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_ALIAS=hanmobile"         >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_PASSWORD=hanmobile"      >> "$GITHUB_ENV"
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "ANDROID_KEYSTORE_PATH=$store" >> "$GITHUB_ENV"
+
+      - name: APK 빌드
+        run: gradle --project-dir android assembleRelease
+
+      - name: APK 이름 정리
+        id: apk
+        run: |
+          set -euo pipefail
+          src=android/app/build/outputs/apk/release/app-release.apk
+          out="han-mobile-1.0.${GITHUB_RUN_NUMBER}.apk"
+          mv "$src" "$out"
+          echo "name=$out" >> "$GITHUB_OUTPUT"
+          echo "size=$(du -h "$out" | cut -f1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: han-mobile-apk
+          path: ${{ steps.apk.outputs.name }}
+          if-no-files-found: error
+
+      # 새로 만든 키는 이번 한 번만 내려받을 수 있게 하루만 보관한다.
+      - name: 새 서명 키 내려주기
+        if: steps.keystore.outputs.generated == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-keystore-KEEP-PRIVATE
+          path: ${{ runner.temp }}/han-mobile.jks
+          retention-days: 1
+
+      - name: 요약
+        run: |
+          {
+            echo "## APK 준비됨"
+            echo
+            echo "- 파일: \`${{ steps.apk.outputs.name }}\` (${{ steps.apk.outputs.size }})"
+            echo "- 이 페이지 아래 **Artifacts** 의 \`han-mobile-apk\` 를 내려받으세요."
+            echo "- 앱은 https://100qhf-cyber.github.io/Han_Mobile/ 를 띄웁니다. 웹을 재배포하면 앱도 최신이 됩니다."
+            echo
+            if [ "${{ steps.keystore.outputs.generated }}" = "true" ]; then
+              echo "### 서명 키가 이번 실행에서 새로 만들어졌습니다"
+              echo
+              echo "지금 상태로는 **빌드할 때마다 서명이 달라져서 덮어쓰기 설치가 안 됩니다.**"
+              echo "고정하려면 아티팩트 \`android-keystore-KEEP-PRIVATE\` 를 받아서(보관 1일)"
+              echo "아래 Secret 네 개를 등록한 뒤 다시 실행하세요."
+              echo
+              echo '| Secret | 값 |'
+              echo '|---|---|'
+              echo '| `ANDROID_KEYSTORE_BASE64` | `base64 -w0 han-mobile.jks` 결과 |'
+              echo '| `ANDROID_KEYSTORE_PASSWORD` | `hanmobile` |'
+              echo '| `ANDROID_KEY_ALIAS` | `hanmobile` |'
+              echo '| `ANDROID_KEY_PASSWORD` | `hanmobile` |'
+              echo
+              echo "> 이 저장소는 공개라 아티팩트도 사실상 공개입니다. 실습용 임시 키로만 쓰고,"
+              echo "> 배포용으로 쓸 키라면 로컬에서 직접 만들어 Secret 으로만 넣으세요."
+            else
+              echo "등록된 Secret 키로 서명했습니다 — 기존 앱 위에 덮어쓰기 설치가 됩니다."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

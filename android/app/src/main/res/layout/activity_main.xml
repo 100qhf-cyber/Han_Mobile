@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- fitsSystemWindows: 상태바/제스처바 영역만큼 안쪽으로 밀어 웹 화면이 가려지지 않게 한다.
+     (targetSdk 35 부터는 기본이 edge-to-edge 라 이 처리가 없으면 상단이 잘린다.) -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/appBackground"
+    android:fitsSystemWindows="true">
+
+    <WebView
+        android:id="@+id/web"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+</FrameLayout>
