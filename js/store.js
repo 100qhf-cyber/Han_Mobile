@@ -160,9 +160,11 @@ class Store extends EventTarget {
   mergeRemote(remoteEntries) {
     if (!Array.isArray(remoteEntries)) return false;
     let changed = false;
+    const remoteIds = new Set();
 
     for (const remote of remoteEntries) {
       if (!remote?.id) continue;
+      remoteIds.add(remote.id);
       const local = this.entries.find((e) => e.id === remote.id);
       if (!local) {
         this.entries.push({ ...remote, updatedAt: new Date().toISOString() });
@@ -170,7 +172,7 @@ class Store extends EventTarget {
         continue;
       }
       // 아직 전송 못 한 로컬 변경이 있으면 그 차량은 건드리지 않는다.
-      if (this.outbox.some((job) => job.entry?.id === local.id || job.id === local.id)) continue;
+      if (this.pendingFor(local.id)) continue;
 
       let touched = false;
       for (const field of ['batteryPct', 'status', 'powerMW', 'zone', 'exitAt']) {
@@ -185,8 +187,28 @@ class Store extends EventTarget {
       }
     }
 
+    // 서버가 준 목록은 "출차하지 않은 차량 전체"다. 그 목록에 없는데 이쪽에선
+    // 아직 살아 있는 차량은 다른 기기(또는 Unity)에서 출차된 것이다.
+    // 이 처리가 없으면 다른 기기의 출차가 이 기기 화면에 영영 반영되지 않는다.
+    for (const local of this.entries) {
+      if (local.status === STATUS.DEPARTED) continue;
+      if (remoteIds.has(local.id)) continue;
+      // 아직 서버에 못 올린 차량은 "사라진 것"이 아니라 "아직 안 올라간 것"이다.
+      if (this.pendingFor(local.id)) continue;
+
+      local.status = STATUS.DEPARTED;
+      local.departedAt = local.departedAt ?? new Date().toISOString();
+      local.updatedAt = new Date().toISOString();
+      changed = true;
+    }
+
     if (changed) this.persistEntries();
     return changed;
+  }
+
+  /** 해당 차량에 대해 아직 전송하지 못한 아웃박스 작업이 있는지 */
+  pendingFor(id) {
+    return this.outbox.some((job) => job.entry?.id === id || job.id === id);
   }
 
   persistEntries() {
