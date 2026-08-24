@@ -77,7 +77,24 @@ jobs:
           echo "ANDROID_KEYSTORE_PATH=$store" >> "$GITHUB_ENV"
 
       - name: APK 빌드
-        run: gradle --project-dir android assembleRelease --stacktrace
+        run: |
+          set -o pipefail
+          gradle --project-dir android assembleRelease --stacktrace 2>&1 \
+            | tee "$RUNNER_TEMP/build.log"
+
+      # 워크플로 로그 원문은 저장소 admin 만 내려받을 수 있다.
+      # 그래서 실패 원인은 annotation 으로 따로 남긴다 — 이건 공개 조회가 된다.
+      - name: 실패 원인 남기기
+        if: failure()
+        run: |
+          log="$RUNNER_TEMP/build.log"
+          [ -f "$log" ] || exit 0
+          err=$(sed -n '/^FAILURE:/,$p' "$log" | head -80)
+          [ -n "$err" ] || err=$(tail -80 "$log")
+          err="${err//'%'/%25}"
+          err="${err//$'\r'/}"
+          err="${err//$'\n'/%0A}"
+          echo "::error title=Gradle 실패::$err"
 
       - name: APK 이름 정리
         id: apk
