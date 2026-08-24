@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Han Mobile">
+  <rect width="512" height="512" rx="112" fill="#0b0f17"/>
+  <!-- 주차 구역 격자 -->
+  <g stroke="#26314699" stroke-width="6" fill="none">
+    <rect x="96" y="112" width="320" height="288" rx="18"/>
+    <path d="M96 208h320M96 304h320M203 112v288M309 112v288"/>
+  </g>
+  <!-- 충전 전력을 뜻하는 번개 -->
+  <path d="M286 128 176 288h64l-30 96 110-160h-64z" fill="#22c55e"/>
+</svg>

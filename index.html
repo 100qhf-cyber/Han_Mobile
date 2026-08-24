@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko" data-app-version="v0.1.0">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Han Mobile · 주차장 입차 등록</title>
+  <meta name="description" content="18구역 미니어처 무선충전 주차장의 입차 등록과 충전 현황을 휴대폰에서 관리합니다.">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b0f17">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Han Mobile">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+  <div class="app">
+    <header class="appbar">
+      <div class="appbar-row">
+        <h1 class="appbar-title">Han Mobile</h1>
+        <span class="appbar-sub">18구역 무선충전 주차장</span>
+      </div>
+      <p id="link-bar" class="link-bar" data-mode="local">로컬 모드</p>
+    </header>
+
+    <h2 id="view-title" class="view-title">입차 등록</h2>
+
+    <main id="view" class="view" role="tabpanel"></main>
+
+    <nav id="tabbar" class="tabbar" role="tablist" aria-label="화면 전환"></nav>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
