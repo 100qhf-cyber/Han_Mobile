@@ -42,5 +42,11 @@ android {
 }
 
 dependencies {
+    // Kotlin 1.8 부터 kotlin-stdlib-jdk7/jdk8 의 내용은 kotlin-stdlib 본체로 들어갔다.
+    // 전이 의존성이 옛 1.6.21 을 함께 끌고 오면 같은 클래스가 두 벌 생겨
+    // :app:checkReleaseDuplicateClasses 에서 빌드가 깨진다.
+    // BOM 으로 kotlin 아티팩트 버전을 맞추면 jdk7/jdk8 은 빈 스텁이 되어 충돌이 사라진다.
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.9.24')
+
     implementation 'androidx.appcompat:appcompat:1.7.1'
 }
