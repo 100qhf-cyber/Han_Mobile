@@ -12,8 +12,8 @@ android {
         targetSdk     35
 
         // CI 실행 번호를 그대로 버전으로 쓴다. 로컬 빌드면 1 / 1.0.0.
-        versionCode (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as Integer
-        versionName "1.0.${System.getenv('GITHUB_RUN_NUMBER') ?: '0'}"
+        versionCode Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
+        versionName "1.0." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
     }
 
     // 서명 정보는 전부 환경변수로 받는다 — 저장소에 keystore 를 넣지 않는다.

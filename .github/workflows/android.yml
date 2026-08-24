@@ -77,7 +77,7 @@ jobs:
           echo "ANDROID_KEYSTORE_PATH=$store" >> "$GITHUB_ENV"
 
       - name: APK 빌드
-        run: gradle --project-dir android assembleRelease
+        run: gradle --project-dir android assembleRelease --stacktrace
 
       - name: APK 이름 정리
         id: apk
