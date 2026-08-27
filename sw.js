@@ -5,7 +5,7 @@
 
 // 앱 코드를 고쳤으면 이 버전을 올린다. 정적 자원이 캐시 우선이라
 // 버전을 그대로 두면 옛 파일이 한 번 더 뜬 뒤에야 새 코드가 적용된다.
-const CACHE = 'han-mobile-v4';
+const CACHE = 'han-mobile-v5';
 
 // 배포 때마다 값이 바뀔 수 있어 캐시 우선으로 두면 옛 접속 정보가 남는다.
 const NETWORK_FIRST = ['/js/app-config.js'];

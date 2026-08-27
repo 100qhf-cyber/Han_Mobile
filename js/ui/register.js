@@ -205,8 +205,6 @@ function refreshDerived() {
   const spec = vehicleSpec(draft.vehicleId);
   const current = (spec.maxCapacity_mWs * draft.batteryPct) / 100;
   const needed  = Math.max(0, spec.maxCapacity_mWs - current);
-  const refPower = Number(store.settings.referencePowerMW) || 0;
-  const chargeMs = refPower > 0 ? (needed / refPower) * 1000 : NaN;
 
   const gauge = $('#f-gauge', root);
   if (gauge) {
@@ -225,8 +223,6 @@ function refreshDerived() {
   summary.replaceChildren(
     summaryRow('현재 저장 에너지', formatEnergy(current)),
     summaryRow('충전 필요량', formatEnergy(needed)),
-    summaryRow(`예상 충전 시간 (${refPower} mW 기준)`,
-      needed === 0 ? '완충 상태' : formatDuration(chargeMs)),
     summaryRow('주차 예정 시간',
       Number.isFinite(stayMs)
         ? (stayMs <= 0 ? '⚠ 출차가 입차보다 빠릅니다' : formatDuration(stayMs))
